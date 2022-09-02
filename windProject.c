@@ -5,6 +5,7 @@
 #include "hardware/irq.h"
 #include "hardware/dma.h"
 #include "hardware/timer.h"
+#include "hardware/adc.h"
 
 #define PI  3.14159265
 
@@ -18,22 +19,32 @@ float radSeg = 0;
 float windSpeed = 0;
 float radio = 0.09;
 
+//Direccion
+const int direccionPin = 28;
+uint16_t direccionAdc;
+float direccionGrados;
+
+//Factor de converion del adc
+const float conversion_factor = 3.3f / (1 << 12);
+
 void sys_init(void);
 void addHole();
 void getSpeed();
 bool everySecond();
+void setDireccion();
 
 int main()
 {   
     sys_init();
     while(true){
-        // printf("Velocidad: %f \n", windSpeed);
-        // sleep_ms(500);
-    };
+        setDireccion();
+        sleep_ms(500);
+    }
 }
 
 void sys_init(void) {
     //SYS_INIT
+    adc_init();
     stdio_init_all();
 
     //GPIOs
@@ -44,6 +55,10 @@ void sys_init(void) {
 
     //Alarmas
     add_repeating_timer_ms(1000, everySecond, NULL, &timer);
+
+    //Dirección
+    adc_gpio_init(direccionPin);
+    adc_select_input(2);
 
     sleep_ms(1500);
 }
@@ -61,4 +76,11 @@ void getSpeed(){
     windSpeed = radSeg * radio;
     printf("Velocidad: %f \n", windSpeed);
     count_holes = 0;
+}
+
+void setDireccion(){
+    direccionAdc = adc_read();
+    // printf("Raw value: 0x%03x, voltage: %f V\n", direccionAdc, direccionAdc * conversion_factor);
+    direccionGrados = (direccionAdc * conversion_factor)*(359.0/3.3);
+    printf("Direccion: %f °\n", direccionGrados);
 }
